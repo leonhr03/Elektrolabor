@@ -1,0 +1,555 @@
+<title>Elektrolabor BFK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Messlabor-Pult – Reiter oben, je Station ein Bedienfeld (Regler) neben einer Anzeige (Messwerte/Oszilloskop) */
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --ink:#18212b; --muted:#5b6876; --line:#d3dae2;
+  --accent:#e8a317; --accent-ink:#4a3200; --volt:#2563a8; --amp:#b0452f; --pow:#1f7a55; --grid:#e3e8ee; --screen:#f7f9fb;
+  --f-display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12171d; --panel:#1b222b; --ink:#e6ebf0; --muted:#97a3b0; --line:#2e3946;
+  --accent:#f0b43a; --accent-ink:#2a1c00; --volt:#6ea8e8; --amp:#e88a72; --pow:#5cc69a; --grid:#253039; --screen:#151b22; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171d; --panel:#1b222b; --ink:#e6ebf0; --muted:#97a3b0; --line:#2e3946;
+  --accent:#f0b43a; --accent-ink:#2a1c00; --volt:#6ea8e8; --amp:#e88a72; --pow:#5cc69a; --grid:#253039; --screen:#151b22; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px;margin-bottom:18px}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(1.6rem,4vw,2.3rem);margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1 small{display:block;font-family:var(--f-mono);font-size:.8rem;font-weight:500;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{font:600 .95rem var(--f-body);padding:9px 16px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tab:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--volt);outline-offset:2px}
+.station{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:18px}
+.st-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:12px}
+.st-id{font-family:var(--f-mono);font-weight:500;background:var(--ink);color:var(--bg);padding:2px 8px;border-radius:4px;font-size:.85rem}
+h2{font-family:var(--f-display);font-weight:700;font-size:1.25rem;margin:0}
+.task{background:color-mix(in srgb,var(--accent) 14%,var(--panel));border-left:4px solid var(--accent);padding:10px 12px;border-radius:4px;margin:0 0 14px;max-width:75ch}
+.task b{font-family:var(--f-mono);font-size:.8rem;letter-spacing:.06em;text-transform:uppercase}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:18px}
+@media (max-width:760px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.ctl{display:grid;gap:14px;align-content:start}
+.ctl label{display:flex;justify-content:space-between;font-weight:600;font-size:.9rem}
+.ctl output,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.meters{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.meter{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--screen)}
+.meter .k{font-size:.8rem;color:var(--muted);font-weight:600}
+.meter .v{font-family:var(--f-mono);font-size:1.45rem;font-variant-numeric:tabular-nums}
+.v.u{color:var(--volt)} .v.i{color:var(--amp)} .v.p{color:var(--pow)}
+.btn{font:600 .9rem var(--f-body);padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+td input{width:78px;font:inherit;font-family:var(--f-mono);padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--screen);color:var(--ink);text-align:right}
+td input.name{width:150px;text-align:left;font-family:var(--f-body)}
+.bar{height:10px;background:var(--pow);border-radius:2px;min-width:1px}
+.lamp{display:flex;align-items:center;justify-content:center;height:150px;border-radius:8px;background:var(--screen);border:1px solid var(--line);position:relative;overflow:hidden}
+.glow{position:absolute;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,var(--accent) 0%,transparent 65%);opacity:.1;transition:opacity .15s}
+.lamp svg{position:relative}
+canvas{width:100%;display:block;border-radius:8px;background:var(--screen);border:1px solid var(--line)}
+.chk{display:flex;gap:6px;align-items:center;font-size:.9rem;font-weight:500}
+.hidden-val{filter:blur(6px);user-select:none}
+.match{font-weight:700;padding:6px 10px;border-radius:6px;display:inline-block}
+.match.ok{background:color-mix(in srgb,var(--pow) 22%,var(--panel));color:var(--pow)}
+.match.no{background:var(--screen);color:var(--muted)}
+.heat{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 10px;align-items:center;font-size:.9rem}
+.heat .track{height:18px;background:var(--grid);border-radius:4px;overflow:hidden}
+.heat .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--amp))}
+.note{color:var(--muted);font-size:.85rem;max-width:75ch}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 .85rem var(--f-body);padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip.done::after{content:" ✓";color:var(--pow)}
+.meterdev{border-radius:14px;background:#2b2f33;padding:16px;color:#e8e8e8;display:grid;gap:10px;max-width:340px}
+.meterdev .lcd{background:#b9c7a3;color:#1d2414;font-family:var(--f-mono);font-size:2.4rem;text-align:right;padding:8px 14px;border-radius:6px;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.meterdev .lcd small{font-size:1rem;margin-left:6px}
+.meterdev .cap{font-family:var(--f-mono);font-size:.75rem;color:#aab;letter-spacing:.08em;display:flex;justify-content:space-between;gap:12px}
+.plate{font-family:var(--f-mono);font-size:.85rem;background:var(--screen);border:1px dashed var(--line);border-radius:6px;padding:8px 10px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+@media (prefers-reduced-motion:reduce){.glow{transition:none}}
+</style>
+
+<div class="wrap">
+<header>
+  <h1><small>BFK · Elektrotechnik · Fachinformatik 1. LJ</small>Elektrolabor</h1>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-leistung" aria-selected="true" data-pane="pane-leistung">Leistungs-Labor (AB05)</button>
+    <button class="tab" role="tab" id="tab-eta" aria-selected="false" data-pane="pane-eta">Wirkungsgrad-Labor (AB06)</button>
+    <button class="tab" role="tab" id="tab-sinus" aria-selected="false" data-pane="pane-sinus">Sinus-Labor (AB07)</button>
+    <button class="tab" role="tab" id="tab-usv" aria-selected="false" data-pane="pane-usv">USV-Labor (AB09)</button>
+  </div>
+</header>
+
+<!-- ================= LEISTUNG ================= -->
+<section id="pane-leistung" role="tabpanel">
+  <div class="station">
+    <div class="st-head"><span class="st-id">Station A</span><h2>Spannung, Strom und Leistung am Widerstand</h2></div>
+    <p class="task"><b>Erst vorhersagen, dann testen:</b> Stelle U = 6 V und R = 12 Ω ein. Notiere auf dem AB, was mit der Leistung P passiert, wenn du die Spannung verdoppelst. Erst danach den Regler bewegen und mit „Messwert speichern“ eine Messreihe aufnehmen.</p>
+    <div class="grid2">
+      <div class="ctl">
+        <div><label for="u"><span>Spannung U</span> <output id="uo">6,0 V</output></label><input type="range" id="u" min="0" max="24" step="0.5" value="6"></div>
+        <div><label for="r"><span>Widerstand R</span> <output id="ro">12 Ω</output></label><input type="range" id="r" min="2" max="60" step="1" value="12"></div>
+        <div class="lamp" aria-hidden="true">
+          <div class="glow" id="glow"></div>
+          <svg width="70" height="100" viewBox="0 0 70 100"><path d="M35 8a24 24 0 0 0-14 44c4 3 6 8 6 13h16c0-5 2-10 6-13A24 24 0 0 0 35 8z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M27 70h16M28 77h14M30 84h10" stroke="currentColor" stroke-width="3"/><path d="M28 60l3-22 4 10 4-10 3 22" fill="none" stroke="var(--accent)" stroke-width="2.5"/></svg>
+        </div>
+        <div class="row"><button class="btn primary" id="save">Messwert speichern</button><button class="btn" id="clear">Messreihe löschen</button></div>
+      </div>
+      <div style="display:grid;gap:12px;align-content:start">
+        <div class="meters">
+          <div class="meter"><div class="k">Spannung U</div><div class="v u" id="mU">6,00 V</div></div>
+          <div class="meter"><div class="k">Stromstärke I</div><div class="v i" id="mI">0,500 A</div></div>
+          <div class="meter"><div class="k">Leistung P</div><div class="v p" id="mP">3,00 W</div></div>
+        </div>
+        <div class="tablewrap"><table><thead><tr><th>Nr.</th><th>U in V</th><th>R in Ω</th><th>I in A</th><th>P in W</th></tr></thead><tbody id="log"><tr><td colspan="5" class="note" style="text-align:left">Noch keine Messwerte. Tipp: 3 V, 6 V, 12 V, 24 V bei gleichem R.</td></tr></tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="station">
+    <div class="st-head"><span class="st-id">Station B</span><h2>Energie- und Kostenrechner</h2></div>
+    <p class="task"><b>Schätzfrage:</b> Was kostet im Jahr mehr – der Wasserkocher (2000 W, täglich 3 min) oder der Router (10 W, rund um die Uhr)? Tipp auf dem AB festhalten, dann hier prüfen. Ändere anschließend die Werte für deine eigenen Geräte.</p>
+    <div class="row" style="margin-bottom:10px">
+      <label for="preis" style="font-weight:600">Strompreis</label>
+      <input id="preis" type="number" step="0.01" min="0" value="0.35" style="width:90px;font-family:var(--f-mono);padding:5px;border:1px solid var(--line);border-radius:4px;background:var(--screen);color:var(--ink)"> <span>€/kWh</span>
+      <button class="btn" id="addrow">Gerät hinzufügen</button>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Gerät</th><th>P in W</th><th>h pro Tag</th><th>Tage/Jahr</th><th>kWh/Tag</th><th>kWh/Jahr</th><th>€/Jahr</th><th style="width:22%">Vergleich</th></tr></thead>
+      <tbody id="dev"></tbody>
+    </table></div>
+    <p class="note">Beispielwerte zum Ausprobieren. 3 min = 0,05 h. Die Leistung steht auf dem Typenschild oder wird mit einem Steckdosen-Messgerät gemessen.</p>
+  </div>
+
+  <div class="station">
+    <div class="st-head"><span class="st-id">Station M</span><h2>Virtuelles Steckdosen-Messgerät</h2></div>
+    <p class="task"><b>Erst schätzen, dann messen:</b> Wählt ein Gerät, tragt eure Schätzung ein – erst dann lässt sich messen. Vergleicht anschließend Schätzung, Messwert und Typenschild.</p>
+    <div class="grid2">
+      <div class="ctl">
+        <div class="chips" id="devs" role="group" aria-label="Gerät auswählen"></div>
+        <div class="plate" id="plate">Typenschild: –</div>
+        <div class="row"><label for="est" style="font-weight:600">Unsere Schätzung:</label>
+          <input id="est" type="number" min="0" step="0.1" placeholder="W" style="width:100px;font-family:var(--f-mono);padding:5px;border:1px solid var(--line);border-radius:4px;background:var(--screen);color:var(--ink)"> <span>W</span>
+          <button class="btn primary" id="measure" disabled>Messen</button></div>
+        <p class="note" id="mhint">Wählt zuerst ein Gerät aus.</p>
+        <p class="note">Wie bei echten Messgeräten: Sehr kleine Leistungen unter 0,1 W werden als 0,0 W angezeigt.</p>
+      </div>
+      <div style="display:grid;gap:12px;align-content:start;justify-items:start">
+        <div class="meterdev" aria-live="polite">
+          <div class="cap"><span>ENERGIEMESSGERÄT</span><span id="mstate">AUS</span></div>
+          <div class="lcd"><span id="lcd">----</span><small>W</small></div>
+          <div class="cap"><span id="mdev">kein Gerät</span><span>230 V~</span></div>
+        </div>
+        <div class="tablewrap" style="width:100%"><table><thead><tr><th>Gerät</th><th>Schätzung</th><th>gemessen</th><th>Typenschild</th></tr></thead><tbody id="mlog"><tr><td colspan="4" class="note" style="text-align:left">Noch keine Messung.</td></tr></tbody></table></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= WIRKUNGSGRAD ================= -->
+<section id="pane-eta" role="tabpanel" hidden>
+  <div class="station">
+    <div class="st-head"><span class="st-id">Station E</span><h2>Wohin geht die Energie im Netzteil?</h2></div>
+    <p class="task"><b>Untersuchen:</b> Ein Steckdosen-Messgerät zeigt am Laptop-Netzteil P<sub>zu</sub> = 76 W, beim Laptop kommen P<sub>ab</sub> = 65 W an. Stellt die Werte ein und beobachtet das Energieflussdiagramm. Probiert danach aus: Was passiert, wenn P<sub>ab</sub> größer als P<sub>zu</sub> sein soll?</p>
+    <div class="grid2">
+      <div class="ctl">
+        <div><label for="pzu"><span>Zugeführte Leistung P<sub>zu</sub> (Steckdose)</span> <output id="pzuo">76 W</output></label><input type="range" id="pzu" min="10" max="200" step="1" value="76"></div>
+        <div><label for="pab"><span>Abgegebene Leistung P<sub>ab</sub> (an den Laptop)</span> <output id="pabo">65 W</output></label><input type="range" id="pab" min="0" max="200" step="1" value="65"></div>
+        <div class="meters">
+          <div class="meter"><div class="k">Verlustleistung P<sub>V</sub></div><div class="v i" id="mPv">11 W</div></div>
+          <div class="meter"><div class="k">Wirkungsgrad η</div><div class="v p" id="mEta">85,5 %</div></div>
+        </div>
+        <div><span class="match no" id="etaMsg">–</span></div>
+      </div>
+      <div><canvas id="sankey" height="260" aria-label="Energieflussdiagramm des Netzteils"></canvas>
+      <p class="note">Die Breite der Pfeile entspricht der Leistung. Was nicht beim Laptop ankommt, wird im Netzteil zu Wärme.</p></div>
+    </div>
+  </div>
+
+  <div class="station">
+    <div class="st-head"><span class="st-id">Station F</span><h2>Vom Kraftwerk bis in den PC</h2></div>
+    <p class="task"><b>Erst schätzen, dann prüfen:</b> Die Energie durchläuft vier Stationen mit den Wirkungsgraden 40 %, 99 %, 95 % und 85 %. Wie viel Prozent der im Kraftwerk eingesetzten Energie kommt im PC an? Tippt euren Wert ein und notiert ihn auf dem AB, bevor ihr auf „Prüfen“ klickt.</p>
+    <div class="grid2">
+      <div class="ctl">
+        <div><label for="e1"><span>η₁ Kraftwerk</span> <output id="e1o">40 %</output></label><input type="range" id="e1" min="10" max="100" step="1" value="40"></div>
+        <div><label for="e2"><span>η₂ Transformator am Kraftwerk</span> <output id="e2o">99 %</output></label><input type="range" id="e2" min="10" max="100" step="1" value="99"></div>
+        <div><label for="e3"><span>η₃ Leitungen und Ortsnetz-Trafo</span> <output id="e3o">95 %</output></label><input type="range" id="e3" min="10" max="100" step="1" value="95"></div>
+        <div><label for="e4"><span>η₄ PC-Netzteil</span> <output id="e4o">85 %</output></label><input type="range" id="e4" min="10" max="100" step="1" value="85"></div>
+        <div class="row"><label for="guess" style="font-weight:600">Mein Tipp:</label>
+          <input id="guess" type="number" min="0" max="100" step="1" placeholder="z. B. 80" style="width:90px;font-family:var(--f-mono);padding:5px;border:1px solid var(--line);border-radius:4px;background:var(--screen);color:var(--ink)"> <span>%</span>
+          <button class="btn primary" id="check">Prüfen</button></div>
+        <div class="meters">
+          <div class="meter"><div class="k">Gesamtwirkungsgrad η<sub>ges</sub></div><div class="v p mono" id="mEges">?</div></div>
+          <div class="meter"><div class="k">Abweichung vom Tipp</div><div class="v mono" id="mDiff">–</div></div>
+        </div>
+      </div>
+      <div><canvas id="chain" height="300" aria-label="Energiekette vom Kraftwerk bis zum PC"></canvas>
+      <p class="note" id="chainNote">Von 100 kWh Energie im Kraftwerk bleibt nach jeder Station nur ein Teil übrig. Die Werte werden nach dem Prüfen angezeigt.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SINUS ================= -->
+<section id="pane-sinus" role="tabpanel" hidden>
+  <div class="station">
+    <div class="st-head"><span class="st-id">Station C</span><h2>Oszilloskop: Kenngrößen der Wechselspannung</h2></div>
+    <p class="task"><b>Erkunden:</b> Stelle û = 325 V und f = 50 Hz ein. Bestimme T aus dem Bild (Zeitachse in ms). Sage voraus, wie sich das Bild bei f = 100 Hz verändert – dann prüfen. Blende die Kenngrößen erst zur Kontrolle ein.</p>
+    <div class="grid2">
+      <div class="ctl">
+        <div><label for="uh"><span>Scheitelwert û</span> <output id="uho">325 V</output></label><input type="range" id="uh" min="0" max="400" step="1" value="325"></div>
+        <div><label for="fr"><span>Frequenz f</span> <output id="fro">50 Hz</output></label><input type="range" id="fr" min="10" max="100" step="1" value="50"></div>
+        <label class="chk" for="showK"><input type="checkbox" id="showK"> Kenngrößen einblenden (û, uss, T)</label>
+        <label class="chk" for="showE"><input type="checkbox" id="showE"> Effektivwert-Linie einblenden</label>
+        <div class="meters">
+          <div class="meter"><div class="k">Periodendauer T</div><div class="v mono" id="mT">?</div></div>
+          <div class="meter"><div class="k">Spitze-Spitze uss</div><div class="v mono" id="mSS">?</div></div>
+        </div>
+        <button class="btn" id="reveal">Messwerte aufdecken</button>
+      </div>
+      <div><canvas id="osc" height="300" aria-label="Oszilloskopbild der Wechselspannung"></canvas>
+      <p class="note" id="cursor">Fahre mit der Maus/dem Finger über das Bild, um den Augenblickswert u(t) abzulesen.</p></div>
+    </div>
+  </div>
+
+  <div class="station">
+    <div class="st-head"><span class="st-id">Station D</span><h2>Wärmevergleich: Wie viel Gleichspannung ersetzt die Steckdose?</h2></div>
+    <p class="task"><b>Forschungsauftrag:</b> Zwei gleiche Kochplatten (R = 200 Ω). Platte 1 hängt an der Wechselspannung von oben, Platte 2 an einer einstellbaren Gleichspannung. Stelle die Gleichspannung so ein, dass beide Platten <i>gleich warm</i> werden. Notiere û, U<sub>DC</sub> und das Verhältnis û / U<sub>DC</sub>. Wiederhole mit einem anderen û. Was fällt auf?</p>
+    <div class="grid2">
+      <div class="ctl">
+        <div><label for="udc"><span>Gleichspannung U<sub>DC</sub> (Platte 2)</span> <output id="udco">100 V</output></label><input type="range" id="udc" min="0" max="400" step="0.5" value="100"></div>
+        <div class="heat">
+          <span>Platte 1 (~)</span><div class="track"><div class="fill" id="h1"></div></div><span class="mono" id="p1">0 W</span>
+          <span>Platte 2 (=)</span><div class="track"><div class="fill" id="h2"></div></div><span class="mono" id="p2">0 W</span>
+        </div>
+        <div><span class="match no" id="match">Noch nicht gleich warm</span></div>
+        <div class="meters">
+          <div class="meter"><div class="k">û (aus Station C)</div><div class="v u" id="uhd">325 V</div></div>
+          <div class="meter"><div class="k">Verhältnis û / U<sub>DC</sub></div><div class="v mono" id="ratio">–</div></div>
+        </div>
+      </div>
+      <div><canvas id="pw" height="260" aria-label="Augenblicksleistung der Kochplatte"></canvas>
+      <p class="note">Grün: Augenblicksleistung p(t) = u(t)² / R der Platte 1. Gestrichelt: ihr Mittelwert – dieser bestimmt, wie warm die Platte wird. Beachte: p(t) wird nie negativ, obwohl u(t) negativ wird.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= USV ================= -->
+<section id="pane-usv" role="tabpanel" hidden>
+  <div class="station">
+    <div class="st-head"><span class="st-id">Station U</span><h2>Stromausfall im Serverraum</h2></div>
+    <p class="task"><b>Erst vorhersagen, dann auslösen:</b> Wählt eine Absicherung und stellt die Überbrückungszeit des Netzteils ein. Entscheidet, ob der PC den Stromausfall übersteht – erst dann lässt sich der Ausfall auslösen.</p>
+    <div class="grid2">
+      <div class="ctl">
+        <div class="chips" id="usvSel" role="group" aria-label="Absicherung wählen"></div>
+        <div class="plate" id="usvInfo">–</div>
+        <div><label for="hold"><span>Überbrückungszeit des PC-Netzteils</span> <output id="holdo">16 ms</output></label><input type="range" id="hold" min="2" max="25" step="1" value="16"></div>
+        <p class="note">Der Kondensator im Netzteil (Glättung) speichert Energie und hält die Ausgangsspannung bei einem Ausfall noch kurz aufrecht. Neue Netzteile schaffen bei Volllast mindestens 16 ms, alte oder schwache Netzteile deutlich weniger.</p>
+        <div class="row"><span style="font-weight:600">Unsere Vorhersage:</span>
+          <button class="chip" id="pY" aria-pressed="false">PC läuft weiter</button>
+          <button class="chip" id="pN" aria-pressed="false">PC geht aus</button></div>
+        <button class="btn primary" id="fail" disabled>Stromausfall auslösen</button>
+        <div><span class="match no" id="usvRes">Noch kein Ausfall ausgelöst.</span></div>
+      </div>
+      <div style="display:grid;gap:10px;align-content:start">
+        <canvas id="usvCv" height="250" aria-label="Spannung am Ausgang der USV"></canvas>
+        <canvas id="holdCv" height="90" aria-label="Lücke und Überbrückungszeit im Vergleich"></canvas>
+        <div class="tablewrap"><table><thead><tr><th>Absicherung</th><th>Netzteil</th><th>Vorhersage</th><th>Ergebnis</th></tr></thead><tbody id="usvLog"><tr><td colspan="4" class="note" style="text-align:left">Noch keine Versuche.</td></tr></tbody></table></div>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const fmt=(x,d=2)=>x.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+// Tabs
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>{x.setAttribute('aria-selected',x===t);$(x.dataset.pane).hidden=x!==t});
+  drawOsc();drawPw();if(typeof drawEta==='function')drawEta();if(typeof uDraw==='function')uDraw();
+  try{localStorage.setItem('tab',t.id)}catch(e){}
+}));
+
+// Station A
+const log=[];
+function updA(){
+  const U=+$('u').value,R=+$('r').value,I=U/R,P=U*I;
+  $('uo').textContent=fmt(U,1)+' V';$('ro').textContent=R+' Ω';
+  $('mU').textContent=fmt(U)+' V';$('mI').textContent=fmt(I,3)+' A';$('mP').textContent=fmt(P)+' W';
+  $('glow').style.opacity=Math.min(1,0.08+P/60);
+}
+$('u').oninput=$('r').oninput=updA;
+$('save').onclick=()=>{const U=+$('u').value,R=+$('r').value;log.push([U,R,U/R,U*U/R]);renderLog()};
+$('clear').onclick=()=>{log.length=0;renderLog()};
+function renderLog(){
+  if(!log.length){$('log').innerHTML='<tr><td colspan="5" class="note" style="text-align:left">Noch keine Messwerte.</td></tr>';return}
+  $('log').innerHTML=log.map((r,i)=>`<tr><td>${i+1}</td><td>${fmt(r[0],1)}</td><td>${r[1]}</td><td>${fmt(r[2],3)}</td><td>${fmt(r[3])}</td></tr>`).join('');
+}
+updA();
+
+// Station B
+const devices=[
+ ['Router',10,24,365],['Wasserkocher',2000,0.05,365],['Gaming-PC (Last)',450,3,250],['PC als Server (Leerlauf)',120,24,365],
+ ['Monitor',25,8,220],['Smartphone laden',15,2,365],['Laptop',45,6,220]];
+function renderDev(){
+  const price=+$('preis').value||0;
+  const rows=devices.map(d=>{const day=d[1]*d[2]/1000,yr=day*d[3];return{d,day,yr,eur:yr*price}});
+  const max=Math.max(...rows.map(r=>r.eur),0.0001);
+  $('dev').innerHTML=rows.map((r,i)=>`<tr>
+   <td><input class="name" id="n${i}" value="${r.d[0]}" data-i="${i}" data-k="0" aria-label="Gerät"></td>
+   <td><input id="p${i}" type="number" min="0" value="${r.d[1]}" data-i="${i}" data-k="1" aria-label="Leistung in W"></td>
+   <td><input id="h${i}" type="number" min="0" max="24" step="0.01" value="${r.d[2]}" data-i="${i}" data-k="2" aria-label="Stunden pro Tag"></td>
+   <td><input id="t${i}" type="number" min="0" max="366" value="${r.d[3]}" data-i="${i}" data-k="3" aria-label="Tage pro Jahr"></td>
+   <td class="mono">${fmt(r.day,3)}</td><td class="mono">${fmt(r.yr,1)}</td><td class="mono"><b>${fmt(r.eur)} €</b></td>
+   <td><div class="bar" style="width:${100*r.eur/max}%"></div></td></tr>`).join('');
+}
+$('dev').addEventListener('change',e=>{const el=e.target;if(!el.dataset.i)return;const k=+el.dataset.k;devices[el.dataset.i][k]=k?(+el.value||0):el.value;renderDev()});
+$('preis').oninput=renderDev;
+$('addrow').onclick=()=>{devices.push(['Neues Gerät',100,1,365]);renderDev()};
+renderDev();
+
+// Sinus
+let revealed=false,hoverT=null;
+function sizeCanvas(c){const dpr=window.devicePixelRatio||1,w=c.clientWidth,h=+c.getAttribute('height');c.width=w*dpr;c.height=h*dpr;c.style.height=h+'px';const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);return{g,w,h}}
+const TW=0.04; // 40 ms Fenster
+function axes(g,w,h,pad,ymax,unit,ystep){
+  g.font='11px "IBM Plex Mono", monospace';g.lineWidth=1;
+  const x0=pad.l,x1=w-pad.r,y0=pad.t,y1=h-pad.b;
+  g.strokeStyle=css('--grid');g.fillStyle=css('--muted');
+  for(let ms=0;ms<=40;ms+=5){const x=x0+(x1-x0)*ms/40;g.beginPath();g.moveTo(x,y0);g.lineTo(x,y1);g.stroke();g.textAlign='center';g.fillText(ms,x,y1+14)}
+  g.textAlign='right';
+  return{x0,x1,y0,y1};
+}
+function drawOsc(){
+  const c=$('osc');if(c.offsetParent===null)return;
+  const {g,w,h}=sizeCanvas(c);const uh=+$('uh').value,f=+$('fr').value,T=1/f,ymax=400;
+  const pad={l:44,r:12,t:12,b:26};const A=axes(g,w,h,pad);
+  const ym=(A.y0+A.y1)/2,sy=v=>ym-v/ymax*(A.y1-A.y0)/2,sx=t=>A.x0+(A.x1-A.x0)*t/TW;
+  g.strokeStyle=css('--grid');g.fillStyle=css('--muted');
+  for(let v=-400;v<=400;v+=100){g.beginPath();g.moveTo(A.x0,sy(v));g.lineTo(A.x1,sy(v));g.stroke();g.fillText(v,A.x0-6,sy(v)+4)}
+  g.strokeStyle=css('--ink');g.beginPath();g.moveTo(A.x0,ym);g.lineTo(A.x1,ym);g.stroke();
+  g.textAlign='left';g.fillText('u in V',A.x0+4,A.y0+10);g.textAlign='right';g.fillText('t in ms',A.x1,A.y1-4);
+  g.strokeStyle=css('--volt');g.lineWidth=2.5;g.beginPath();
+  for(let i=0;i<=600;i++){const t=TW*i/600,x=sx(t),y=sy(uh*Math.sin(2*Math.PI*f*t));i?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();
+  if($('showE').checked){const ue=uh/Math.SQRT2;g.setLineDash([6,4]);g.strokeStyle=css('--pow');g.lineWidth=2;
+    [ue,-ue].forEach(v=>{g.beginPath();g.moveTo(A.x0,sy(v));g.lineTo(A.x1,sy(v));g.stroke()});g.setLineDash([]);
+    g.fillStyle=css('--pow');g.textAlign='left';g.font='600 12px "IBM Plex Mono", monospace';g.fillText('Ueff = '+fmt(ue,1)+' V',A.x0+6,sy(ue)-5)}
+  if($('showK').checked&&uh>0){
+    g.strokeStyle=css('--amp');g.fillStyle=css('--amp');g.lineWidth=1.6;g.font='600 12px "IBM Plex Mono", monospace';
+    const tp=T/4;if(tp<TW){const x=sx(tp);arrow(g,x,ym,x,sy(uh));g.textAlign='left';g.fillText('û',x+5,(ym+sy(uh))/2)}
+    const tm=3*T/4;if(tm<TW){const x=sx(tm)+0;arrow(g,x,sy(uh),x,sy(-uh));arrow(g,x,sy(-uh),x,sy(uh));g.textAlign='left';g.fillText('uss',x+5,ym+16)}
+    if(T+tp<TW){const y=sy(uh)-8;arrow(g,sx(tp),y,sx(T+tp),y);arrow(g,sx(T+tp),y,sx(tp),y);g.textAlign='center';g.fillText('T',(sx(tp)+sx(T+tp))/2,y-5)}
+  }
+  if(hoverT!==null){const u=uh*Math.sin(2*Math.PI*f*hoverT);g.fillStyle=css('--accent');g.beginPath();g.arc(sx(hoverT),sy(u),5,0,7);g.fill();
+    $('cursor').textContent='t = '+fmt(hoverT*1000,1)+' ms   →   u(t) = '+fmt(u,1)+' V'}
+  $('uho').textContent=uh+' V';$('fro').textContent=f+' Hz';$('uhd').textContent=uh+' V';
+  $('mT').textContent=revealed?fmt(T*1000,1)+' ms':'?';$('mSS').textContent=revealed?fmt(2*uh,0)+' V':'?';
+}
+function arrow(g,x1,y1,x2,y2){g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.closePath();g.fill()}
+const R=200;
+function drawPw(){
+  const uh=+$('uh').value,f=+$('fr').value,udc=+$('udc').value;
+  const pAC=uh*uh/(2*R),pDC=udc*udc/R,pMax=400*400/R;
+  $('udco').textContent=fmt(udc,1)+' V';$('p1').textContent=fmt(pAC,0)+' W';$('p2').textContent=fmt(pDC,0)+' W';
+  $('h1').style.width=100*pAC/(pMax/2)+'%';$('h2').style.width=Math.min(100,100*pDC/(pMax/2))+'%';
+  const ok=pAC>0&&Math.abs(pAC-pDC)/pAC<0.01;
+  $('match').className='match '+(ok?'ok':'no');$('match').textContent=ok?'Gleich warm! Verhältnis notieren.':'Noch nicht gleich warm';
+  $('ratio').textContent=udc>0?fmt(uh/udc,3):'–';
+  const c=$('pw');if(c.offsetParent===null)return;
+  const {g,w,h}=sizeCanvas(c);const pad={l:44,r:12,t:12,b:26};const A=axes(g,w,h,pad);
+  const pm=Math.max(100,uh*uh/R*1.1),sy=p=>A.y1-p/pm*(A.y1-A.y0),sx=t=>A.x0+(A.x1-A.x0)*t/TW;
+  g.fillStyle=css('--muted');g.strokeStyle=css('--grid');const step=pm>500?200:100;
+  for(let p=0;p<=pm;p+=step){g.beginPath();g.moveTo(A.x0,sy(p));g.lineTo(A.x1,sy(p));g.stroke();g.fillText(p,A.x0-6,sy(p)+4)}
+  g.textAlign='left';g.fillText('p in W',A.x0+4,A.y0+10);g.textAlign='right';g.fillText('t in ms',A.x1,A.y1-4);
+  g.strokeStyle=css('--pow');g.lineWidth=2.5;g.beginPath();
+  for(let i=0;i<=600;i++){const t=TW*i/600,u=uh*Math.sin(2*Math.PI*f*t),x=sx(t),y=sy(u*u/R);i?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();
+  g.setLineDash([6,4]);g.lineWidth=2;g.beginPath();g.moveTo(A.x0,sy(pAC));g.lineTo(A.x1,sy(pAC));g.stroke();g.setLineDash([]);
+  if(pDC<=pm){g.strokeStyle=css('--amp');g.beginPath();g.moveTo(A.x0,sy(pDC));g.lineTo(A.x1,sy(pDC));g.stroke();
+    g.fillStyle=css('--amp');g.textAlign='right';g.font='600 12px "IBM Plex Mono", monospace';g.fillText('Platte 2 (DC)',A.x1-4,sy(pDC)-5)}
+}
+['uh','fr','showK','showE'].forEach(id=>$(id).addEventListener('input',()=>{drawOsc();drawPw()}));
+$('udc').oninput=drawPw;
+$('reveal').onclick=()=>{revealed=!revealed;$('reveal').textContent=revealed?'Messwerte verdecken':'Messwerte aufdecken';drawOsc()};
+const osc=$('osc');
+function hov(e){const r=osc.getBoundingClientRect(),cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;const t=(cx-44)/(r.width-56)*TW;hoverT=(t>=0&&t<=TW)?t:null;drawOsc()}
+osc.addEventListener('mousemove',hov);osc.addEventListener('touchmove',hov,{passive:true});
+osc.addEventListener('mouseleave',()=>{hoverT=null;drawOsc()});
+
+
+// ===== Station M: virtuelles Messgerät
+const DEV=[
+ {n:'Laptop, Office-Betrieb',p:25,j:3,t:'Netzteil OUTPUT: 20 V ⎓ 3,25 A (65 W)'},
+ {n:'Laptop lädt und rechnet unter Volllast',p:76,j:1.5,t:'Netzteil OUTPUT: 20 V ⎓ 3,25 A (65 W)'},
+ {n:'Laptop-Netzteil ohne Laptop',p:0.2,j:0.05,t:'Netzteil OUTPUT: 20 V ⎓ 3,25 A (65 W)'},
+ {n:'Monitor 24", eingeschaltet',p:20,j:1,t:'Leistungsaufnahme: max. 35 W'},
+ {n:'Monitor, Standby',p:0.4,j:0.05,t:'Leistungsaufnahme: max. 35 W, Standby < 0,5 W'},
+ {n:'Handy-Ladegerät ohne Handy',p:0.05,j:0.03,t:'OUTPUT: 5 V ⎓ 3 A / 9 V ⎓ 2,22 A (20 W)'},
+ {n:'WLAN-Router',p:9,j:0.6,t:'Netzteil OUTPUT: 12 V ⎓ 1,5 A'}];
+let mSel=-1,mOn=false,mTimer=null;const mRes={};
+function mRender(){
+  $('devs').innerHTML=DEV.map((d,i)=>`<button class="chip${mRes[i]?' done':''}" aria-pressed="${i===mSel}" data-i="${i}">${d.n}</button>`).join('');
+  const d=DEV[mSel];$('plate').textContent=d?'Typenschild: '+d.t:'Typenschild: –';
+  $('mdev').textContent=d?d.n:'kein Gerät';
+  const ok=mSel>=0&&$('est').value!=='';$('measure').disabled=!ok;
+  $('mhint').textContent=mSel<0?'Wählt zuerst ein Gerät aus.':(ok?'Bereit zum Messen.':'Tragt erst eure Schätzung ein.');
+  const rows=Object.keys(mRes).map(k=>{const r=mRes[k];return `<tr><td>${DEV[k].n}</td><td>${fmt(r.e,1)} W</td><td><b>${r.m<0.1?'< 0,1':fmt(r.m,1)} W</b></td><td style="white-space:normal;text-align:left;min-width:120px;font-size:.82rem">${DEV[k].t}</td></tr>`});
+  $('mlog').innerHTML=rows.length?rows.join(''):'<tr><td colspan="4" class="note" style="text-align:left">Noch keine Messung.</td></tr>';
+}
+function mRead(d){const v=Math.max(0,d.p+(Math.random()*2-1)*d.j);return Math.round(v*10)/10}
+function mStart(){
+  clearInterval(mTimer);const d=DEV[mSel];mOn=true;$('mstate').textContent='MESSUNG';
+  let k=0;$('lcd').textContent='····';
+  mTimer=setInterval(()=>{k++;if(k<3){$('lcd').textContent=k%2?'-·-·':'·-·-';return}
+    const v=mRead(d);$('lcd').textContent=fmt(v,1);if(k===3){mRes[mSel]={e:+$('est').value,m:d.p};mRender()}},600);
+}
+$('devs').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;mSel=+b.dataset.i;clearInterval(mTimer);mOn=false;
+  $('mstate').textContent='BEREIT';$('lcd').textContent='----';$('est').value=mRes[mSel]?mRes[mSel].e:'';mRender();$('est').focus()});
+$('est').addEventListener('input',mRender);
+$('measure').onclick=()=>{if(mSel>=0&&$('est').value!=='')mStart()};
+mRender();
+
+
+// ===== Station U: Stromausfall-Simulator
+const USV=[
+ {n:'keine USV',gap:Infinity,form:'none',info:'Der Server hängt direkt an der Steckdose.'},
+ {n:'Offline-USV (VFD)',gap:8,form:'rect',info:'Klasse 3 · Umschaltzeit 4–10 ms (hier 8 ms) · Ausgang rechteckähnlich'},
+ {n:'Line-Interactive-USV (VI)',gap:3,form:'step',info:'Klasse 2 · Umschaltzeit 2–4 ms (hier 3 ms) · Ausgang stufenförmig'},
+ {n:'Online-USV (VFI)',gap:0,form:'sine',info:'Klasse 1 · keine Umschaltung, erzeugt die Spannung ständig selbst · Ausgang sinusförmig'},
+ {n:'nur Notstromaggregat',gap:15000,form:'none',info:'Dieselgenerator springt nach ca. 15 s an (wie im Zeitungsbericht).'}];
+let uSel=1,uPred=null,uDone=false;const uLog=[];
+const T0=20; // Ausfall bei 20 ms
+function uWave(t){ // t in ms
+  const d=USV[uSel],ph=((t%20)+20)%20/20;
+  if(t<T0)return 325*Math.sin(2*Math.PI*t/20);
+  if(!uDone)return 325*Math.sin(2*Math.PI*t/20);
+  if(t<T0+d.gap)return 0;
+  if(d.form==='sine')return 325*Math.sin(2*Math.PI*t/20);
+  if(d.form==='rect')return ph<.5?230:-230;
+  if(d.form==='step')return (ph>.125&&ph<.375)?325:((ph>.625&&ph<.875)?-325:0);
+  return 0;
+}
+function uRender(){
+  $('usvSel').innerHTML=USV.map((d,i)=>`<button class="chip" aria-pressed="${i===uSel}" data-i="${i}">${d.n}</button>`).join('');
+  $('usvInfo').textContent=USV[uSel].info;$('holdo').textContent=$('hold').value+' ms';
+  $('pY').setAttribute('aria-pressed',uPred===true);$('pN').setAttribute('aria-pressed',uPred===false);
+  $('fail').disabled=uPred===null;
+  const rows=uLog.map(r=>`<tr><td>${r.n}</td><td>${r.h} ms</td><td>${r.p?'läuft':'aus'}</td><td><b style="color:${r.ok?'var(--pow)':'var(--amp)'}">${r.ok?'läuft weiter':'PC aus'}</b>${r.p===r.ok?' ✓':' ✗'}</td></tr>`);
+  $('usvLog').innerHTML=rows.length?rows.join(''):'<tr><td colspan="4" class="note" style="text-align:left">Noch keine Versuche.</td></tr>';
+  uDraw();
+}
+function uDraw(){
+  const c=$('usvCv');if(c.offsetParent===null)return;
+  const {g,w,h}=sizeCanvas(c);const x0=44,x1=w-10,y0=12,y1=h-26,TW=80,ym=(y0+y1)/2;
+  const sx=t=>x0+(x1-x0)*t/TW,sy=v=>ym-v/400*(y1-y0)/2;
+  g.font='11px "IBM Plex Mono", monospace';g.strokeStyle=css('--grid');g.fillStyle=css('--muted');g.lineWidth=1;
+  for(let t=0;t<=TW;t+=10){g.beginPath();g.moveTo(sx(t),y0);g.lineTo(sx(t),y1);g.stroke();g.textAlign='center';g.fillText(t,sx(t),y1+14)}
+  for(const v of[-325,0,325]){g.beginPath();g.moveTo(x0,sy(v));g.lineTo(x1,sy(v));g.stroke();g.textAlign='right';g.fillText(v,x0-6,sy(v)+4)}
+  g.textAlign='right';g.fillText('t in ms',x1,y1-4);g.textAlign='left';g.fillText('u in V (USV-Ausgang)',x0+4,y0+10);
+  if(uDone){const d=USV[uSel];const ge=Math.min(TW,T0+d.gap);
+    g.fillStyle=css('--amp');g.globalAlpha=.15;g.fillRect(sx(T0),y0,sx(ge)-sx(T0),y1-y0);g.globalAlpha=1;
+    g.strokeStyle=css('--amp');g.setLineDash([4,4]);g.beginPath();g.moveTo(sx(T0),y0);g.lineTo(sx(T0),y1);g.stroke();g.setLineDash([]);
+    g.fillStyle=css('--amp');g.textAlign='left';g.fillText('Netzausfall',sx(T0)+4,y1-6)}
+  g.strokeStyle=css('--volt');g.lineWidth=2.2;g.beginPath();
+  for(let i=0;i<=1600;i++){const t=TW*i/1600,x=sx(t),y=sy(uWave(t));i?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();
+  // Vergleichsbalken
+  const c2=$('holdCv');const r=sizeCanvas(c2),g2=r.g,w2=r.w;const hold=+$('hold').value,d=USV[uSel];
+  const max=30,bx=150,bw=w2-bx-60,sc=v=>bw*Math.min(v,max)/max;
+  g2.font='12px "IBM Plex Sans", sans-serif';g2.textAlign='right';g2.fillStyle=css('--ink');
+  g2.fillText('Lücke (Umschaltzeit)',bx-8,28);g2.fillText('Netzteil überbrückt',bx-8,66);
+  g2.fillStyle=css('--grid');g2.fillRect(bx,16,bw,18);g2.fillRect(bx,54,bw,18);
+  const gapTxt=d.gap===Infinity?'kein Ende':(d.gap>=1000?(d.gap/1000)+' s':d.gap+' ms');
+  if(uDone){g2.fillStyle=css('--amp');g2.fillRect(bx,16,sc(d.gap===Infinity?max:d.gap),18)}
+  g2.fillStyle=css('--pow');g2.fillRect(bx,54,sc(hold),18);
+  g2.textAlign='left';g2.fillStyle=css('--ink');g2.font='600 12px "IBM Plex Mono", monospace';
+  g2.fillText(uDone?gapTxt:'?',bx+(uDone?sc(d.gap===Infinity?max:d.gap):0)+6,30);g2.fillText(hold+' ms',bx+sc(hold)+6,68);
+}
+$('usvSel').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;uSel=+b.dataset.i;uDone=false;uPred=null;$('usvRes').className='match no';$('usvRes').textContent='Noch kein Ausfall ausgelöst.';uRender()});
+$('hold').addEventListener('input',()=>{uDone=false;$('usvRes').className='match no';$('usvRes').textContent='Noch kein Ausfall ausgelöst.';uRender()});
+$('pY').onclick=()=>{uPred=true;uRender()};$('pN').onclick=()=>{uPred=false;uRender()};
+$('fail').onclick=()=>{const d=USV[uSel],hold=+$('hold').value;uDone=true;const ok=d.gap<=hold;
+  uLog.push({n:d.n,h:hold,p:uPred,ok});
+  const r=$('usvRes');r.className='match '+(ok?'ok':'no');
+  r.textContent=ok?(d.gap===0?'PC läuft weiter: Die Online-USV liefert ohne Unterbrechung.':`PC läuft weiter: Die Lücke von ${d.gap} ms ist kürzer als die ${hold} ms, die das Netzteil überbrückt.`)
+    :(d.gap===Infinity?'PC aus: Ohne USV fällt der Server sofort aus – ungespeicherte Daten sind verloren.':`PC aus: Die Lücke (${d.gap>=1000?d.gap/1000+' s':d.gap+' ms'}) ist länger als die ${hold} ms, die das Netzteil überbrückt.`);
+  uRender()};
+
+// ===== Wirkungsgrad-Labor
+function drawSankey(){
+  const pzu=+$('pzu').value,pab=+$('pab').value;
+  $('pzuo').textContent=pzu+' W';$('pabo').textContent=pab+' W';
+  const ok=pab<=pzu,pv=pzu-pab,eta=pab/pzu;
+  $('mPv').textContent=ok?fmt(pv,0)+' W':'–';$('mEta').textContent=ok?fmt(eta*100,1)+' %':'> 100 % ?';
+  const m=$('etaMsg');
+  if(!ok){m.className='match no';m.textContent='Unmöglich: Das Netzteil kann keine Energie erzeugen. η ist immer kleiner als 100 %.'}
+  else if(pv===0){m.className='match no';m.textContent='η = 100 %: ein ideales Netzteil ohne Wärme. Das gibt es in der Realität nicht.'}
+  else{m.className='match ok';m.textContent=fmt(pv,0)+' W werden im Netzteil zu Wärme.'}
+  const c=$('sankey');if(c.offsetParent===null)return;
+  const {g,w,h}=sizeCanvas(c);const sc=Math.min(1.1,(h-70)/200);
+  const x0=90,xs=w*0.45,x1=w-110,yc=70,bz=pzu*sc,ba=Math.min(pab,pzu)*sc,bv=ok?pv*sc:0;
+  g.font='600 13px "IBM Plex Mono", monospace';
+  // Zufluss
+  g.fillStyle=css('--volt');g.fillRect(x0,yc,xs-x0,bz);
+  g.fillStyle=css('--ink');g.textAlign='right';g.fillText('Steckdose',x0-8,yc+bz/2-2);g.fillText(pzu+' W',x0-8,yc+bz/2+14);
+  // Nutzen
+  g.fillStyle=css('--pow');g.beginPath();g.moveTo(xs,yc);g.lineTo(x1,yc);g.lineTo(x1+18,yc+ba/2);g.lineTo(x1,yc+ba);g.lineTo(xs,yc+ba);g.closePath();g.fill();
+  g.fillStyle=css('--ink');g.textAlign='left';g.fillText('Laptop',x1+24,yc+ba/2-2);g.fillText(Math.min(pab,pzu)+' W',x1+24,yc+ba/2+14);
+  // Verlust nach unten
+  if(bv>0){g.fillStyle=css('--amp');const xl=xs+20,yb=h-14;
+    g.beginPath();g.moveTo(xs,yc+ba);g.lineTo(xs,yc+bz);g.quadraticCurveTo(xs+0,yb-20,xl,yb-10);g.lineTo(xl+bv,yb-10);
+    g.quadraticCurveTo(xs+bv+40,yc+ba,xs+bv+60,yc+ba);g.closePath();g.fill();
+    g.fillStyle=css('--amp');g.fillText('Wärme (Verlust) '+pv+' W',xl+bv+12,yb-12)}
+  g.fillStyle=css('--muted');g.font='12px "IBM Plex Sans", sans-serif';g.textAlign='center';g.fillText('Netzteil',xs,yc-10);
+  g.strokeStyle=css('--muted');g.setLineDash([4,4]);g.beginPath();g.moveTo(xs,yc-4);g.lineTo(xs,yc+bz+4);g.stroke();g.setLineDash([]);
+}
+['pzu','pab'].forEach(id=>$(id).addEventListener('input',drawSankey));
+let chainShown=false;
+const stages=[['Kraftwerk','e1'],['Trafo Kraftwerk','e2'],['Netz + Ortstrafo','e3'],['PC-Netzteil','e4']];
+function drawChain(){
+  stages.forEach(([n,id])=>$(id+'o').textContent=$(id).value+' %');
+  let e=100;const vals=[100];stages.forEach(([n,id])=>{e*= +$(id).value/100;vals.push(e)});
+  const eg=vals[4];
+  $('mEges').textContent=chainShown?fmt(eg,1)+' %':'?';
+  const gs=parseFloat($('guess').value);
+  $('mDiff').textContent=chainShown&&!isNaN(gs)?(gs-eg>0?'+':'')+fmt(gs-eg,1)+' Pkt.':'–';
+  if(chainShown)$('chainNote').textContent='η(ges) = η₁ · η₂ · η₃ · η₄ = '+stages.map(([n,id])=>fmt(+$(id).value/100,2)).join(' · ')+' ≈ '+fmt(eg/100,3)+'. Die Wirkungsgrade werden multipliziert, weil jede Station nur einen Anteil von dem weitergibt, was bei ihr ankommt.';
+  const c=$('chain');if(c.offsetParent===null)return;
+  const {g,w,h}=sizeCanvas(c);const pad=28,lab=128,bw=w-lab-pad-60,rh=(h-pad)/5;
+  g.font='12px "IBM Plex Sans", sans-serif';
+  const names=['Energie im Kraftwerk',...stages.map(s=>'nach '+s[0])];
+  vals.forEach((v,i)=>{const y=pad/2+i*rh,bh=rh*0.62;
+    g.fillStyle=css('--muted');g.textAlign='right';g.fillText(names[i],lab-8,y+bh/2+4);
+    g.fillStyle=css('--grid');g.fillRect(lab,y,bw,bh);
+    const show=chainShown||i===0;
+    g.fillStyle=i===4?css('--pow'):css('--volt');g.globalAlpha=show?1:.25;g.fillRect(lab,y,bw*v/100,bh);g.globalAlpha=1;
+    g.fillStyle=css('--ink');g.textAlign='left';g.font='600 12px "IBM Plex Mono", monospace';
+    g.fillText(show?fmt(v,1)+' kWh':'? kWh',lab+bw*(show?v:100)/100+6,y+bh/2+4);g.font='12px "IBM Plex Sans", sans-serif'});
+  if(!isNaN(gs)&&gs>=0&&gs<=100){const x=lab+bw*gs/100;g.strokeStyle=css('--accent');g.lineWidth=2.5;g.setLineDash([5,4]);
+    g.beginPath();g.moveTo(x,pad/2-6);g.lineTo(x,h-4);g.stroke();g.setLineDash([]);g.lineWidth=1;
+    g.fillStyle=css('--accent');g.textAlign='center';g.font='600 11px "IBM Plex Mono", monospace';g.fillText('Tipp',x,pad/2-8>8?pad/2-8:10)}
+}
+stages.forEach(([n,id])=>$(id).addEventListener('input',drawChain));
+$('guess').addEventListener('input',drawChain);
+$('check').onclick=()=>{chainShown=!chainShown;$('check').textContent=chainShown?'Verdecken':'Prüfen';drawChain()};
+function drawEta(){drawSankey();drawChain()}
+window.addEventListener('resize',()=>{drawOsc();drawPw();drawEta();uDraw()});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{drawOsc();drawPw();drawEta()});
+document.fonts&&document.fonts.ready.then(()=>{drawOsc();drawPw();drawEta()});
+drawOsc();drawPw();drawEta();uRender();
+try{const s=localStorage.getItem('tab');if(s&&$(s))$(s).click()}catch(e){}
+if(location.hash==='#sinus')$('tab-sinus').click();
+if(location.hash==='#wirkungsgrad')$('tab-eta').click();
+if(location.hash==='#usv')$('tab-usv').click();
+</script>
